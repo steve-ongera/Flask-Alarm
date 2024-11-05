@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarm Clock</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #282c34;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .clock {
+            width: 300px;
+            height: 300px;
+            border: 10px solid #ffffff;
+            border-radius: 50%;
+            position: relative;
+            background-color: #4a4e54;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        .hand {
+            position: absolute;
+            background-color: #ffffff;
+            transform-origin: bottom;
+            bottom: 50%;
+            left: 50%;
+            transform: translateX(-50%) rotate(90deg); /* Starting position at 12 o'clock */
+        }
+        .hour-hand {
+            width: 8px;
+            height: 60px;
+            background-color: #ffcc00;
+            z-index: 3;
+        }
+        .minute-hand {
+            width: 4px;
+            height: 80px;
+            background-color: #ff6600;
+            z-index: 2;
+        }
+        .center-circle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+        }
+        #setAlarmBtn, #stopAlarmBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #ffcc00;
+            color: #282c34;
+            transition: background-color 0.3s;
+        }
+        #setAlarmBtn:hover, #stopAlarmBtn:hover {
+            background-color: #e6b800;
+        }
+        #currentTime {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        #remainingTime {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #ffcc00;
+        }
+        #ampm {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #alarmTime {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Set Alarm</h1>
+    <div class="clock" id="clock">
+        <div class="hand hour-hand" id="hourHand"></div>
+        <div class="hand minute-hand" id="minuteHand"></div>
+        <div class="center-circle"></div>
+    </div>
+    
+    <div id="currentTime"></div>
+    <div id="ampm">
+        <label for="ampmSelect">AM/PM:</label>
+        <select id="ampmSelect">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+    </div>
+    <button id="setAlarmBtn">Set Alarm</button>
+    <button id="stopAlarmBtn" style="display: none;">Stop Alarm</button>
+    <div id="remainingTime"></div>
+    <div id="alarmTime"></div>
+
+    <script>
+        const hourHand = document.getElementById("hourHand");
+        const minuteHand = document.getElementById("minuteHand");
+        const currentTimeDisplay = document.getElementById("currentTime");
+        const remainingTimeDisplay = document.getElementById("remainingTime");
+        const alarmTimeDisplay = document.getElementById("alarmTime");
+        const ampmSelect = document.getElementById("ampmSelect");
+        let hour = 12; // Default hour
+        let minute = 0; // Default minute
+        let alarmTime = null;
+
+        // Function to update the position of the clock hands
+        function updateClockHands() {
+            const hourDeg = (hour % 12) * 30 + (minute / 60) * 30; // 360 degrees / 12 hours
+            const minuteDeg = (minute / 60) * 360; // 360 degrees / 60 minutes
+            hourHand.style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+            minuteHand.style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
+            currentTimeDisplay.textContent = `Current Time: ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${ampmSelect.value}`;
+            updateRemainingTime();
+        }
+
+        // Update remaining time until the alarm goes off
+        function updateRemainingTime() {
+            if (alarmTime) {
+                const now = new Date();
+                const alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmTime.hour, alarmTime.minute, 0);
+                if (alarmDate < now) {
+                    alarmDate.setDate(alarmDate.getDate() + 1); // Set for the next day if the time has already passed
+                }
+                const remainingTime = Math.round((alarmDate - now) / 1000); // Get remaining seconds
+                const hoursLeft = Math.floor(remainingTime / 3600);
+                const minutesLeft = Math.floor((remainingTime % 3600) / 60);
+                const secondsLeft = remainingTime % 60;
+                remainingTimeDisplay.textContent = `Time until alarm: ${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`;
+                alarmTimeDisplay.textContent = `Alarm Time: ${String(alarmTime.hour).padStart(2, '0')}:${String(alarmTime.minute).padStart(2, '0')} ${alarmTime.ampm}`;
+            }
+        }
+
+        // Initialize the clock
+        updateClockHands();
+
+        // Handle hand dragging for setting time
+        let isDraggingHour = false;
+        let isDraggingMinute = false;
+
+        hourHand.addEventListener("mousedown", function() {
+            isDraggingHour = true;
+        });
+
+        minuteHand.addEventListener("mousedown", function() {
+            isDraggingMinute = true;
+        });
+
+        document.addEventListener("mouseup", function() {
+            isDraggingHour = false;
+            isDraggingMinute = false;
+        });
+
+        document.addEventListener("mousemove", function(event) {
+            if (isDraggingHour || isDraggingMinute) {
+                const rect = document.getElementById("clock").getBoundingClientRect();
+                const clockX = rect.left + rect.width / 2;
+                const clockY = rect.top + rect.height / 2;
+                const mouseX = event.clientX;
+                const mouseY = event.clientY;
+
+                const angle = Math.atan2(mouseY - clockY, mouseX - clockX) * (180 / Math.PI);
+                
+                if (isDraggingHour) {
+                    hour = Math.round((angle + 180) / 30) % 12; // Convert angle to hour
+                } else if (isDraggingMinute) {
+                    minute = Math.round((angle + 180) / 6) % 60; // Convert angle to minute
+                }
+                updateClockHands();
+            }
+        });
+
+        // Set the alarm
+        document.getElementById("setAlarmBtn").addEventListener("click", function() {
+            alarmTime = {
+                hour: hour + (ampmSelect.value === 'PM' && hour < 12 ? 12 : 0),
+                minute: minute,
+                ampm: ampmSelect.value
+            };
+            fetch('/set_alarm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `alarmTime=${String(alarmTime.hour).padStart(2, '0')}:${String(alarmTime.minute).padStart(2, '0')}`
+            });
+            this.style.display = 'none';
+            document.getElementById("stopAlarmBtn").style.display = 'block';
+            updateRemainingTime();
+        });
+
+        // Stop the alarm
+        document.getElementById("stopAlarmBtn").addEventListener("click", function() {
+            fetch('/stop_alarm', {
+                method: 'POST'
+            });
+            this.style.display = 'none';
+            document.getElementById("setAlarmBtn").style.display = 'block';
+            alarmTime = null;
+            remainingTimeDisplay.textContent = '';
+            alarmTimeDisplay.textContent = '';
+        });
+    </script>
+
+</body>
+</html>
